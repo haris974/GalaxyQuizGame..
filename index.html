@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Galaxy Game</title>
+  <style>
+  * {margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif;}
+  body {
+    background:#0a0f24;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* BACKGROUND BINTANG */
+  body::before, body::after {
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:200%; height:200%;
+    background: transparent url("assets/gdl.jpg") repeat;
+    z-index:-1;
+  }
+  body::before {animation: starsMove 60s linear infinite;}
+  body::after {animation: starsMove 120s linear infinite reverse;}
+
+  @keyframes starsMove {
+    from {transform:translate(0,0);}
+    to {transform:translate(-500px,-500px);}
+  }
+
+  section {display:none; width:100%; height:100vh; justify-content:center; align-items:center; flex-direction:column;}
+
+  /* FLASH SCREEN */
+  #flash-screen {display:flex; background:#0a0f24;}
+  #flash-screen img {width:auto; height:70vh; max-width:95vw; object-fit: contain;}
+
+  /* LOGIN */
+  #login-screen input {
+    padding:12px; font-size:18px; margin-bottom:20px; width:80%; max-width:300px; border-radius:6px; border:none;
+  }
+  #login-screen button {
+    padding:12px 24px; font-size:18px; cursor:pointer; margin-top:10px; border-radius:6px;
+  }
+  .music-btn {font-size:28px; background:none; border:none; color:white; cursor:pointer; margin-top:20px;}
+
+  /* HOME SCREEN */
+  #home-screen h2 {margin-bottom:10px; font-size:22px;}
+  #home-screen h3 {margin-bottom:15px; font-size:18px;}
+  .levels {
+    display:grid; 
+    grid-template-columns: repeat(2, 1fr);
+    gap:12px;
+    width:90%;
+    max-width:400px;
+  }
+  .level-btn {
+    padding:14px 0;
+    font-size:16px;
+    background:#1e90ff;
+    border:none;
+    color:white;
+    cursor:pointer;
+    border-radius:6px;
+  }
+  .level-btn.locked {background:gray; cursor:not-allowed;}
+
+  /* GAME SCREEN */
+  #game-screen {
+    text-align:center; padding:20px; position:relative; width:100%;
+  }
+  #timer, #score {
+    font-weight:bold; padding:6px 10px; border-radius:6px;
+    font-size:18px; background:rgba(0,0,0,0.5);
+  }
+  #timer {position:absolute; top:10px; left:10px; color:yellow;}
+  #score {position:absolute; top:10px; right:10px; color:lime;}
+
+  #question {margin-bottom:15px; font-size:20px; line-height:1.4;}
+
+  .option {
+    display:block;
+    margin:12px 0;
+    padding:14px;
+    background:#333;
+    border-radius:6px;
+    cursor:pointer;
+    color:white;
+    font-size:18px;
+    width:90%;
+    max-width:400px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .option.correct {background:green !important;}
+  .option.wrong {background:red !important;}
+
+  #next-btn {
+    margin-top:20px;
+    padding:12px 24px;
+    background:#1e90ff;
+    border:none;
+    color:white;
+    border-radius:6px;
+    display:none;
+    cursor:pointer;
+    font-size:16px;
+  }
+
+  #game-controls {
+    position:absolute;
+    bottom:15px;
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    padding:0 20px;
+  }
+  #game-controls button {font-size:28px; background:none; border:none; color:white; cursor:pointer;}
+</style>
+</head>
+<body>
+
+  <!-- FLASH SCREEN -->
+  <section id="flash-screen">
+    <img src="assets/hdl.png" alt="Logo Quiz">
+  </section>
+
+  <!-- LOGIN SCREEN -->
+  <section id="login-screen">
+    <h2>Masukkan Nama</h2>
+    <input type="text" id="playerName" placeholder="Nama kamu">
+    <button onclick="startLogin()">Mulai</button>
+    <button class="music-btn" onclick="toggleMusic()">🎵</button>
+  </section>
+
+  <!-- HOME SCREEN -->
+  <section id="home-screen">
+    <h2 id="welcomeName"></h2>
+    <h3>Pilih Level</h3>
+    <div class="levels">
+      <button class="level-btn" onclick="startGame(1)">Level 1</button>
+      <button class="level-btn locked">Level 2</button>
+      <button class="level-btn locked">Level 3</button>
+      <button class="level-btn locked">Level 4</button>
+      <button class="level-btn locked">Level 5</button>
+      <button class="level-btn locked">Level 6</button>
+      <button class="level-btn locked">Level 7</button>
+      <button class="level-btn locked">Level 8</button>
+      <button class="level-btn locked">Level 9</button>
+      <button class="level-btn locked">Level 10</button>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game-screen">
+    <div id="timer">⏳ 15</div>
+    <div id="score">Score: 0</div>
+    <h2 id="question">Pertanyaan akan muncul di sini</h2>
+    <div id="options"></div>
+    <button id="next-btn" onclick="nextQuestion()">Soal Selanjutnya</button>
+    <div id="game-controls">
+      <button onclick="goHome()">🏠</button>
+      <button class="music-btn" onclick="toggleMusic()">🎵</button>
+    </div>
+  </section>
+
+  <script>
+    // Flash screen hilang otomatis
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        document.getElementById("flash-screen").style.display = "none";
+        document.getElementById("login-screen").style.display = "flex";
+      }, 3000);
+    });
+
+    // Musik background
+    let music = null;
+    try {
+      music = new Audio("assets/music.mp3");
+      music.loop = true;
+      music.volume = 0.5;
+    } catch (e) {
+      music = null;
+    }
+    let musicOn = false;
+    function updateMusicIcons() {
+      document.querySelectorAll(".music-btn").forEach(btn => {
+        btn.textContent = musicOn ? "🎵" : "❌🎵";
+      });
+    }
+    function toggleMusic() {
+      if (music) {
+        if (music.paused) {
+          music.play().catch(()=>{});
+          musicOn = true;
+        } else {
+          music.pause();
+          musicOn = false;
+        }
+      } else {
+        musicOn = !musicOn;
+      }
+      updateMusicIcons();
+    }
+
+    // Sound efek benar/salah/click
+    const soundBenar = new Audio("assets/correct.mp3");
+    const soundSalah = new Audio("assets/wrong.wav");
+
+    // Login
+    function startLogin() {
+      const name = document.getElementById("playerName").value.trim();
+      if (name !== "") {
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("home-screen").style.display = "flex";
+        document.getElementById("welcomeName").textContent = "SELAMAT DATANG, " + name;
+        updateMusicIcons();
+      } else {
+        alert("Nama tidak boleh kosong!");
+      }
+    }
+
+    // Soal
+    const questions = {
+  1: [
+    { q:"2 + 2 = ?", options:["3","4","5","6"], answer:1 },
+    { q:"5 × 3 = ?", options:["10","8","12","15"], answer:3 },
+    { q:"12 ÷ 4 = ?", options:["3","2","4","6"], answer:0 },
+    { q:"7 - 3 = ?", options:["3","5","4","6"], answer:2 },
+    { q:"10 + 5 = ?", options:["15","16","14","20"], answer:0 },
+    { q:"9 × 2 = ?", options:["18","12","20","16"], answer:0 },
+    { q:"8 ÷ 2 = ?", options:["5","4","2","3"], answer:1 },
+    { q:"6 + 7 = ?", options:["13","12","14","15"], answer:0 },
+    { q:"5 × 5 = ?", options:["15","25","20","30"], answer:1 },
+    { q:"10 - 6 = ?", options:["5","4","3","6"], answer:1 }
+  ],
+  2: [
+    { q:"Tempat ibadah umat Islam?", options:["Masjid","Gereja","Pura","Vihara"], answer:0 },
+    { q:"Tempat ibadah umat Kristen?", options:["Gereja","Masjid","Vihara","Pura"], answer:0 },
+    { q:"Tempat ibadah umat Hindu?", options:["Pura","Masjid","Vihara","Gereja"], answer:0 },
+    { q:"Tempat ibadah umat Buddha?", options:["Pura","Masjid","Vihara","Gereja"], answer:2 },
+    { q:"Masjid Istiqlal berada di?", options:["Jakarta","Surabaya","Bandung","Yogyakarta"], answer:0 },
+    { q:"Gereja Katedral Jakarta berada di?", options:["Jakarta","Bandung","Semarang","Surabaya"], answer:0 },
+    { q:"Pura Besakih berada di?", options:["Bali","Jawa","Sumatra","Sulawesi"], answer:0 },
+    { q:"Vihara Borobudur berada di?", options:["Jawa Tengah","Bali","Sumatra","Jawa Barat"], answer:0 },
+    { q:"Masjid Agung Demak berada di?", options:["Jawa Tengah","Jawa Timur","Bali","Sumatra"], answer:0 },
+    { q:"Gereja Blenduk berada di?", options:["Semarang","Surabaya","Bandung","Jakarta"], answer:0 }
+  ],
+  3:[
+    { q:"Siapa pelukis terkenal asal Belanda?", options:["Van Gogh","Picasso","Da Vinci","Monet"], answer:0 },
+    { q:"Alat musik tradisional Indonesia yang dipukul?", options:["Piano","Violin","Sitar","Gamelan"], answer:3 },
+    { q:"Tari Kecak berasal dari?", options:["Bali","Jawa","Sulawesi","Sumatra"], answer:0 },
+    { q:"Seni rupa 2 dimensi contohnya?", options:["Patung","Arsitektur","Kerajinan","Lukisan"], answer:3 },
+    { q:"Batik termasuk seni?", options:["Musik","Tari","Rupa","Teater"], answer:2 },
+    { q:"Wayang kulit termasuk seni?", options:["Tari","Pertunjukan","Musik","Rupa"], answer:1 },
+    { q:"Seniman terkenal Affandi adalah pelukis?", options:["Impresionis","Ekspresionis","Klasik","Modern"], answer:1 },
+    { q:"Gamelan terdiri dari?", options:["Piano, Biola, Gitar","Drum, Bass, Saxophone","Kenong, Gong, Saron","Flute, Trumpet, Harpa"], answer:2 },
+    { q:"Motif batik parang berasal dari?", options:["Bali","Aceh","Solo","Papua"], answer:2 },
+    { q:"Seni tari Pendet berasal dari?", options:["Jawa Tengah","Bali","Sumatra","Kalimantan"], answer:1 }
+  ],
+  4: [
+    { q:"Olahraga dengan raket dan shuttlecock?", options:["Tenis","Badminton","Squash","Pingpong"], answer:1 },
+    { q:"Sepak bola dimainkan berapa pemain?", options:["7","11","5","9"], answer:1 },
+    { q:"Maraton berjarak?", options:["10 km","50 km","42 km","21 km"], answer:2 },
+    { q:"Olahraga bela diri asal Jepang?", options:["Judo","Taekwondo","Muay Thai","Karate"], answer:0 },
+    { q:"Basket dimainkan oleh?", options:["7 pemain","5 pemain tiap tim","11 pemain","3 pemain"], answer:1 },
+    { q:"Renang gaya bebas disebut?", options:["Butterfly","Backstroke","Freestyle","Breaststroke"], answer:2 },
+    { q:"Sepak takraw menggunakan?", options:["Bola plastik","Bola rotan","Bola karet","Bola besi"], answer:1 },
+    { q:"Lari estafet berapa orang per tim?", options:["3","4","5","6"], answer:1 },
+    { q:"Piala dunia sepak bola pertama diadakan?", options:["1920","1930","1940","1950"], answer:1 },
+    { q:"Olahraga panjat tebing kompetitif termasuk?", options:["Sprint, Marathon, Hurdle","Freestyle, Relay, Medley","Lead, Speed, Bouldering","Rugby, Football, Hockey"], answer:2 }
+  ],
+  5: [
+    { q:"Software pengolah kata?", options:["Word","Excel","PowerPoint","Access"], answer:0 },
+    { q:"Shortcut copy di Word?", options:["Ctrl+V","Ctrl+X","Ctrl+C","Ctrl+Z"], answer:2 },
+    { q:"Fungsi SUM di Excel?", options:["Menjumlahkan","Menghapus","Membagi","Mengalikan"], answer:0 },
+    { q:"Sheet baru di Excel?", options:["Copy Sheet","Insert Sheet","Delete Sheet","Rename Sheet"], answer:1 },
+    { q:"Cara membuat bullet di Word?", options:["Klik Borders","Klik Styles","Klik Bullets","Klik Table"], answer:2 },
+    { q:"Shortcut paste di Word?", options:["Ctrl+V","Ctrl+C","Ctrl+X","Ctrl+P"], answer:0 },
+    { q:"Fungsi AVERAGE di Excel?", options:["Jumlah","Maksimum","Rata-rata","Minimum"], answer:2 },
+    { q:"Fungsi IF di Excel untuk?", options:["Format","Kondisi","Sorting","Filter"], answer:1 },
+    { q:"Untuk membuat header di Word?", options:["Insert > Header","Format > Header","Tools > Header","View > Header"], answer:0 },
+    { q:"Shortcut save dokumen?", options:["Ctrl+O","Ctrl+P","Ctrl+N","Ctrl+S"], answer:3 }
+  ],
+  6: [
+    { q:"Planet terdekat ke Matahari?", options:["Bumi","Mars","Merkurius","Venus"], answer:2 },
+    { q:"Gas utama atmosfer?", options:["Oksigen","Nitrogen","Karbon dioksida","Hidrogen"], answer:1 },
+    { q:"Hewan yang bertelur dan menyusui?", options:["Platipus","Kucing","Ayam","Kelinci"], answer:0 },
+    { q:"Gunung tertinggi di dunia?", options:["Everest","K2","Kilimanjaro","Elbrus"], answer:0 },
+    { q:"Benda langit berwarna merah disebut?", options:["Mars","Venus","Bulan","Merkurius"], answer:0 },
+    { q:"Organ tubuh memompa darah?", options:["Paru","Hati","Jantung","Ginjal"], answer:2 },
+    { q:"Hewan terbesar di laut?", options:["Paus Biru","Hiu","Paus Pembunuh","Lumba-lumba"], answer:0 },
+    { q:"Benda jatuh karena?", options:["Magnet","Gravitasi","Gaya","Energi"], answer:1 },
+    { q:"Alat optik melihat jauh?", options:["Mikroskop","Teropong","Lup","Kamera"], answer:1 },
+    { q:"Zat padat menjadi cair?", options:["Menguap","Mencair","Membeku","Menyublim"], answer:1 }
+  ],
+  7: [
+    { q:"Ibukota Indonesia?", options:["Jakarta","Surabaya","Bandung","Yogyakarta"], answer:0 },
+    { q:"Pulau terbesar di Indonesia?", options:["Sumatra","Borneo","Jawa","Sulawesi"], answer:1 },
+    { q:"Lambang negara?", options:["Garuda","Bunga","Bendera","Mentari"], answer:0 },
+    { q:"Sungai terpanjang di Indonesia?", options:["Kapuas","Musik","Musi","Bengawan Solo"], answer:0 },
+    { q:"Danau terbesar di Indonesia?", options:["Toba","Sentani","Paniai","Ranau"], answer:0 },
+    { q:"Gunung tertinggi di Indonesia?", options:["Rinjani","Semeru","Kerinci","Everest"], answer:2 },
+    { q:"Bahasa resmi Indonesia?", options:["Jawa","Sunda","Indonesia","Melayu"], answer:2 },
+    { q:"Pahlawan nasional pertama Indonesia?", options:["Soekarno","Diponegoro","Bung Tomo","Cut Nyak Dien"], answer:0 },
+    { q:"Hari Kemerdekaan Indonesia?", options:["17 Agustus","20 Mei","1 Juni","10 Oktober"], answer:0 },
+    { q:"Pulau Komodo berada di?", options:["Bali","NTT","Sumatra","Sulawesi"], answer:1 }
+  ],
+  8: [
+  { q:"Pulau terbesar di Indonesia adalah?", options:["Jawa","Sumatra","Kalimantan","Papua"], answer:2 }, // C
+  { q:"Ibukota negara Australia adalah?", options:["Sydney","Melbourne","Canberra","Perth"], answer:2 }, // C
+  { q:"Alat untuk mengukur suhu adalah?", options:["Termometer","Barometer","Higrometer","Anemometer"], answer:0 }, // A
+  { q:"Sungai terpanjang di dunia adalah?", options:["Amazon","Nil","Yangtze","Mississippi"], answer:1 }, // B
+  { q:"Tahun berapakah proklamasi kemerdekaan Indonesia?", options:["1940","1945","1950","1955"], answer:1 }, // B
+  { q:"Negara dengan penduduk terbanyak di dunia adalah?", options:["India","Cina","Amerika Serikat","Indonesia"], answer:0 }, // A
+  { q:"Benda langit yang menjadi satelit alami Bumi adalah?", options:["Matahari","Bulan","Mars","Venus"], answer:1 }, // B
+  { q:"Penemu bola lampu pijar adalah?", options:["Thomas Alva Edison","Alexander Graham Bell","Nikola Tesla","Albert Einstein"], answer:0 }, // A
+  { q:"Gunung berapi tertinggi di Indonesia adalah?", options:["Kerinci","Rinjani","Semeru","Tambora"], answer:0 }, // A
+  { q:"Ilmuwan yang menemukan hukum gravitasi adalah?", options:["Albert Einstein","Isaac Newton","Galileo Galilei","Charles Darwin"], answer:1 } // B
+    ],
+  9: [
+    { q:"Apa ibukota negara Jepang?", options:["Seoul","Tokyo","Beijing","Bangkok"], answer:1 },
+    { q:"Mata uang Jepang?", options:["Yuan","Won","Yen","Dollar"], answer:2 },
+    { q:"Gunung Fuji berada di?", options:["Jepang","China","Korea","Thailand"], answer:0 },
+    { q:"Bahasa resmi Jepang?", options:["Mandarin","Korea","Jepang","Vietnam"], answer:2 },
+    { q:"Samurai berasal dari?", options:["China","Jepang","Korea","Thailand"], answer:1 },
+    { q:"Kota terbesar Jepang?", options:["Osaka","Tokyo","Kyoto","Sapporo"], answer:1 },
+    { q:"Festival Hanami berkaitan dengan?", options:["Bunga sakura","Bunga tulip","Bunga mawar","Bunga lily"], answer:0 },
+    { q:"Transportasi cepat Jepang?", options:["Kereta api","Bus","Mobil","Pesawat"], answer:0 },
+    { q:"Bento adalah?", options:["Minuman","Makanan","Baju","Alat musik"], answer:1 },
+    { q:"Anime populer berasal dari?", options:["China","Korea","Jepang","USA"], answer:2 }
+  ],
+  10: [
+    { q:"HTML digunakan untuk?", options:["Membuat website","Mengedit gambar","Memutar musik","Membuat video"], answer:0 },
+    { q:"CSS digunakan untuk?", options:["Memberi style website","Membuat video","Menulis artikel","Memutar musik"], answer:0 },
+    { q:"JavaScript digunakan untuk?", options:["Memberi style","Interaktif website","Edit gambar","Putar video"], answer:1 },
+    { q:"Tag HTML untuk paragraf?", options:["<h1>","<p>","<div>","<span>"], answer:1 },
+    { q:"Tag HTML untuk link?", options:["<a>","<p>","<div>","<span>"], answer:0 },
+    { q:"Fungsi console.log di JS?", options:["Cetak ke layar","Edit gambar","Memutar musik","Membuat paragraf"], answer:0 },
+    { q:"Event onclick digunakan untuk?", options:["Menampilkan pesan","Membuat video","Mengedit CSS","Memutar musik"], answer:0 },
+    { q:"Fungsi document.getElementById?", options:["Ambil element","Edit gambar","Putar musik","Membuat video"], answer:0 },
+    { q:"Fungsi addEventListener?", options:["Menangkap event","Mengedit gambar","Memutar musik","Membuat video"], answer:0 },
+    { q:"JS digunakan untuk?", options:["Membuat website interaktif","Memberi style","Mengedit gambar","Memutar musik"], answer:0 }
+    ]
+};
+
+    
+
+    let currentLevel = 1;
+    let currentQuestion = 0;
+    let score = 0;
+    let timerRef = null;
+
+    function startGame(level) {
+      const allBtns = document.querySelectorAll(".level-btn");
+      if (allBtns[level-1].classList.contains("locked")) return;
+      currentLevel = level;
+      currentQuestion = 0;
+      score = 0;
+      document.getElementById("home-screen").style.display = "none";
+      document.getElementById("game-screen").style.display = "flex";
+      document.getElementById("score").textContent = "Score: " + score;
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      clearInterval(timerRef);
+      let timeLeft = 15;
+      document.getElementById("timer").textContent = "⏳ " + timeLeft;
+      timerRef = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").textContent = "⏳ " + timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerRef);
+          disableOptions();
+          document.getElementById("next-btn").style.display = "block";
+        }
+      }, 1000);
+
+      const levelQuestions = questions[currentLevel] || [];
+      const qObj = levelQuestions[currentQuestion];
+      if (!qObj) {
+        alert("Level " + currentLevel + " selesai!");
+        document.getElementById("game-screen").style.display = "none";
+        document.getElementById("home-screen").style.display = "flex";
+        unlockNextLevel();
+        return;
+      }
+
+      document.getElementById("question").textContent = qObj.q;
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+      qObj.options.forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.className = "option";
+        btn.onclick = () => checkAnswer(btn, i, qObj.answer);
+        optionsDiv.appendChild(btn);
+      });
+      document.getElementById("next-btn").style.display = "none";
+      document.getElementById("score").textContent = "Score: " + score;
+    }
+
+    function checkAnswer(btn, selected, correct) {
+      clearInterval(timerRef);
+      const optionBtns = document.querySelectorAll(".option");
+      optionBtns.forEach(b => b.disabled = true);
+      if (selected === correct) {
+        btn.classList.add("correct");
+        score += 10;
+        soundBenar.play();
+      } else {
+        btn.classList.add("wrong");
+        if (optionBtns[correct]) optionBtns[correct].classList.add("correct");
+        soundSalah.play();
+      }
+      document.getElementById("score").textContent = "Score: " + score;
+      document.getElementById("next-btn").style.display = "block";
+    }
+
+    function disableOptions() {
+      document.querySelectorAll(".option").forEach(opt => opt.disabled = true);
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+      loadQuestion();
+    }
+
+    function goHome() {
+      clearInterval(timerRef);
+      document.getElementById("game-screen").style.display = "none";
+      document.getElementById("home-screen").style.display = "flex";
+    }
+
+    function unlockNextLevel() {
+  const btns = Array.from(document.querySelectorAll(".level-btn"));
+  const nextLevelNumber = currentLevel + 1;
+  if (nextLevelNumber <= btns.length) {
+    const nextBtn = btns[nextLevelNumber - 1];
+    nextBtn.classList.remove("locked");
+    nextBtn.disabled = false;
+    nextBtn.setAttribute("aria-disabled", "false");
+    const levelToStart = nextLevelNumber;
+    nextBtn.onclick = () => startGame(levelToStart);
+  }
+}
+    updateMusicIcons();
+  </script>
+</body>
+</html>
